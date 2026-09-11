@@ -24,14 +24,4 @@ public class AtlasApplication {
 				.build();
 	}
 
-	@Bean
-    CommandLineRunner runner(BedrockConverseService bedrockConverseService) {
-		return args -> {
-			String answer = bedrockConverseService.converse(
-					"Write a one-sentence bedtime story about a unicorn."
-			);
-			System.out.println(answer);
-		};
-	}
-
 }

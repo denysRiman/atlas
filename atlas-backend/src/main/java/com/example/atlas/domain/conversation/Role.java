@@ -1,4 +1,4 @@
-package com.example.atlas.enums;
+package com.example.atlas.domain.conversation;
 
 public enum Role {
     USER(),

@@ -1,4 +1,4 @@
-package com.example.atlas.utility;
+package com.example.atlas.prompt;
 
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;

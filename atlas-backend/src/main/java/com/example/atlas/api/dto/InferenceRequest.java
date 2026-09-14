@@ -1,4 +1,4 @@
-package com.example.atlas.dto;
+package com.example.atlas.api.dto;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 @Getter
-public class IncomeMessage {
+public class InferenceRequest {
 
     @NotBlank
     @Size(max = 100)

@@ -21,7 +21,7 @@ public class BedrockExceptionTranslator {
         }
     }
 
-    private RuntimeException translate(Throwable throwable) {
+    public RuntimeException translate(Throwable throwable) {
         Throwable cause = unwrap(throwable);
 
         return switch (cause) {

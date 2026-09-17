@@ -34,7 +34,6 @@ public class AtlasService {
     public CompletableFuture<Void> inferentMessageStream(InferenceRequest request, Consumer<AtlasStreamEvent> eventConsumer) {
         var workingConversation = new ArrayList<>(conversationHistory);
         workingConversation.add(new ConversationMessage(Role.USER, request.getMessage()));
-
         StringBuilder assistantResponse = new StringBuilder();
 
         Consumer<AtlasStreamEvent> internalEventConsumer = event -> {
@@ -51,16 +50,20 @@ public class AtlasService {
             }
         };
 
-        return bedrockConverseService.converseStream(workingConversation,
-                        new ModelConfig(request.getMaxTokens(), request.getTemperature()), internalEventConsumer)
-                .whenComplete((result, exception) -> {
-                    if (exception != null) {
-                        eventConsumer.accept(new StreamErrorEvent());
-                    } else {
-                        conversationHistory.add(new ConversationMessage(Role.USER, request.getMessage()));
-                        conversationHistory.add(new ConversationMessage(Role.ASSISTANT, assistantResponse.toString()));
-                        eventConsumer.accept(new StreamCompletedEvent());
-                    }
-                });
+        var conversedStream = bedrockConverseService.converseStream(workingConversation,
+                new ModelConfig(request.getMaxTokens(), request.getTemperature()), internalEventConsumer);
+        conversedStream.whenComplete((result, exception) -> {
+            if (!conversedStream.isCancelled()) {
+                if (exception != null) {
+                    eventConsumer.accept(new StreamErrorEvent(exception.getMessage()));
+                } else {
+                    conversationHistory.add(new ConversationMessage(Role.USER, request.getMessage()));
+                    conversationHistory.add(new ConversationMessage(Role.ASSISTANT, assistantResponse.toString()));
+                    eventConsumer.accept(new StreamCompletedEvent());
+                }
+            }
+        });
+
+        return conversedStream;
     }
 }

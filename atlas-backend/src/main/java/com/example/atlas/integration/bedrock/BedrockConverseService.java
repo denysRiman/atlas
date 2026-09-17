@@ -37,15 +37,31 @@ public class BedrockConverseService {
     }
 
     public CompletableFuture<Void> converseStream(List<ConversationMessage> conversationHistory, ModelConfig modelConfig, Consumer<AtlasStreamEvent> eventConsumer) {
-        return  exceptionTranslator.execute(() -> {
-            ConverseStreamResponseHandler handler = ConverseStreamResponseHandler.builder()
-                    .subscriber(ConverseStreamResponseHandler.Visitor.builder()
-                            .onMessageStart(event -> eventConsumer.accept(new StreamStartedEvent()))
-                            .onContentBlockDelta(event -> eventConsumer.accept(new StreamDeltaEvent(event.delta().text())))
-                            .build()
-                    )
-                    .build();
-            return bedrockRuntimeAsyncClient.converseStream(requestFactory.createConverseStreamRequest(conversationHistory, modelConfig), handler);
+        ConverseStreamResponseHandler handler = ConverseStreamResponseHandler.builder()
+                .subscriber(ConverseStreamResponseHandler.Visitor.builder()
+                        .onMessageStart(event -> eventConsumer.accept(new StreamStartedEvent()))
+                        .onContentBlockDelta(event -> eventConsumer.accept(new StreamDeltaEvent(event.delta().text())))
+                        .build()
+                )
+                .build();
+        var awsFuture = bedrockRuntimeAsyncClient.converseStream(requestFactory.createConverseStreamRequest(conversationHistory, modelConfig), handler);
+
+        var resultFuture = new CompletableFuture<Void>();
+
+        awsFuture.whenComplete((result, exception) -> {
+           if (exception != null) {
+               resultFuture.completeExceptionally(exceptionTranslator.translate(exception));
+           } else {
+               resultFuture.complete(null);
+           }
         });
+
+        resultFuture.whenComplete((r, e) -> {
+           if(resultFuture.isCancelled()) {
+               awsFuture.cancel(false);
+           }
+        });
+
+        return resultFuture;
     }
 }

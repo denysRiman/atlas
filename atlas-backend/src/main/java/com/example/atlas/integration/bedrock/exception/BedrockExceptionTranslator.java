@@ -7,6 +7,7 @@ import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.bedrockruntime.model.*;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
 
@@ -57,7 +58,7 @@ public class BedrockExceptionTranslator {
 
             case BedrockRuntimeException e ->
                     new InternalException(e.getMessage(), e);
-
+            case CancellationException e -> e;
             default ->
                     new InternalException("Unexpected Bedrock failure", cause);
         };

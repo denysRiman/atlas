@@ -3,6 +3,7 @@ package com.example.atlas.integration.bedrock.request;
 import com.example.atlas.domain.conversation.ConversationMessage;
 import com.example.atlas.domain.inference.ModelConfig;
 import com.example.atlas.integration.bedrock.mapper.BedrockMessageMapper;
+import com.example.atlas.integration.bedrock.tool.BedrockToolConfigurationFactory;
 import com.example.atlas.prompt.SystemPromptProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -23,10 +24,12 @@ public class BedrockRequestFactory {
 
     private final BedrockMessageMapper messageMapper;
     private final SystemPromptProvider systemPromptProvider;
+    private final BedrockToolConfigurationFactory bedrockToolConfigurationFactory;
 
     public ConverseRequest createConverseRequest(List<ConversationMessage> conversationHistory, ModelConfig modelConfig) {
         return ConverseRequest.builder().modelId(MODEL_ID).messages(messageMapper.map(conversationHistory))
                 .system(SystemContentBlock.fromText(systemPromptProvider.getSystemPrompt()))
+                .toolConfig(bedrockToolConfigurationFactory.createToolConfiguration())
                 .guardrailConfig(config -> config.guardrailIdentifier(GUARDRAIL_IDENTIFIER)
                         .guardrailVersion(GUARDRAIL_VERSION))
                 .inferenceConfig(

@@ -1,10 +1,11 @@
 package com.example.atlas.integration.bedrock;
 
 import com.example.atlas.domain.conversation.ConversationMessage;
+import com.example.atlas.domain.inference.InferenceResult;
 import com.example.atlas.domain.inference.ModelConfig;
-import com.example.atlas.api.dto.InferenceResponse;
 import com.example.atlas.domain.streaming.*;
 import com.example.atlas.integration.bedrock.exception.BedrockExceptionTranslator;
+import com.example.atlas.integration.bedrock.mapper.BedrockInferenceResultMapper;
 import com.example.atlas.integration.bedrock.request.BedrockRequestFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,13 +27,14 @@ public class BedrockConverseService {
     private final BedrockRuntimeAsyncClient bedrockRuntimeAsyncClient;
     private final BedrockRequestFactory requestFactory;
     private final BedrockExceptionTranslator exceptionTranslator;
+    private final BedrockInferenceResultMapper bedrockInferenceResultMapper;
 
 
-    public InferenceResponse converse(List<ConversationMessage> conversationHistory, ModelConfig modelConfig) {
+    public InferenceResult converse(List<ConversationMessage> conversationHistory, ModelConfig modelConfig) {
         return  exceptionTranslator.execute(() -> {
             ConverseResponse response = bedrockRuntimeClient.converse(requestFactory
                     .createConverseRequest(conversationHistory, modelConfig));
-            return new InferenceResponse(response.output().message().content().getFirst().text());
+            return bedrockInferenceResultMapper.map(response);
         });
     }
 
@@ -45,7 +47,6 @@ public class BedrockConverseService {
                 )
                 .build();
         var awsFuture = bedrockRuntimeAsyncClient.converseStream(requestFactory.createConverseStreamRequest(conversationHistory, modelConfig), handler);
-
         var resultFuture = new CompletableFuture<Void>();
 
         awsFuture.whenComplete((result, exception) -> {

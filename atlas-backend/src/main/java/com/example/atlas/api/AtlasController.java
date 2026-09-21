@@ -30,12 +30,11 @@ public class AtlasController {
     private final AtlasService atlasService;
 
     @PostMapping("/inference")
-    public ResponseEntity<InferenceResponse> inference(@Valid @RequestBody InferenceRequest message) {
-        return ResponseEntity.ok(atlasService.inferentMessage(message));
+    public ResponseEntity<InferenceResponse> inference(@Valid @RequestBody InferenceRequest request) {
+        return ResponseEntity.ok(atlasService.inferentMessage(request));
     }
 
-    @PostMapping(
-            value = "/inference/stream",
+    @PostMapping(value = "/inference/stream",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter inferenceStream(@Valid @RequestBody InferenceRequest request) {
         SseEmitter emitter = new SseEmitter(timeout.toMillis());

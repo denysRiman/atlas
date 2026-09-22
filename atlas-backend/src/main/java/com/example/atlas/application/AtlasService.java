@@ -11,6 +11,7 @@ import com.example.atlas.domain.inference.ToolCallInferenceResult;
 import com.example.atlas.domain.streaming.*;
 import com.example.atlas.integration.bedrock.BedrockConverseService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -21,6 +22,9 @@ import java.util.function.Consumer;
 @Service
 @RequiredArgsConstructor
 public class AtlasService {
+
+    @Value("${atlas.max.agent.steps}")
+    private int maxSteps;
 
     private final BedrockConverseService bedrockConverseService;
     private final ToolExecutor toolExecutor;
@@ -33,7 +37,7 @@ public class AtlasService {
         var workingConversation = new ArrayList<>(conversationHistory);
         workingConversation.add(new ConversationMessage(Role.USER, new TextContent(request.getMessage())));
 
-        for(int maxSteps = 0; maxSteps < 10; maxSteps++) {
+        for(int step = 0; step < maxSteps; step++) {
             InferenceResult inferenceResult = bedrockConverseService.converse(workingConversation, modelConfig);
 
             switch (inferenceResult) {

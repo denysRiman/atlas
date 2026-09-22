@@ -19,6 +19,9 @@ public class BedrockToolConfigurationFactory {
                 .tools(
                         Tool.builder()
                                 .toolSpec(createWeatherToolSpecification())
+                                .build(),
+                        Tool.builder()
+                                .toolSpec(createTimeToolSpecification())
                                 .build())
                 .build();
     }
@@ -43,5 +46,28 @@ public class BedrockToolConfigurationFactory {
                 .name("getWeather")
                 .description("Get current weather for a city")
                 .inputSchema(weatherInputSchema).build();
+    }
+
+    private ToolSpecification createTimeToolSpecification() {
+        ToolInputSchema timeInputSchema = ToolInputSchema.builder()
+                .json(Document.fromMap(Map.of(
+                        "type", Document.fromString("object"),
+                        "properties", Document.fromMap(Map.of(
+                                "city", Document.fromMap(Map.of(
+                                        "type", Document.fromString("string"),
+                                        "description", Document.fromString("City to get current local time for")
+                                ))
+                        )),
+                        "required", Document.fromList(List.of(
+                                Document.fromString("city")
+                        ))
+                )))
+                .build();
+
+        return ToolSpecification.builder()
+                .name("getTime")
+                .description("Get current local time for a city")
+                .inputSchema(timeInputSchema)
+                .build();
     }
 }

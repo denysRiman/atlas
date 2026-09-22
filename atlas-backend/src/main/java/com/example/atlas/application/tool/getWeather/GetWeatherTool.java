@@ -1,4 +1,4 @@
-package com.example.atlas.application.tool;
+package com.example.atlas.application.tool.getWeather;
 
 import org.springframework.stereotype.Component;
 

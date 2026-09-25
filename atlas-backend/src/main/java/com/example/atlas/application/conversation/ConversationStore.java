@@ -5,6 +5,7 @@ import com.example.atlas.domain.conversation.ConversationSnapshot;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public interface ConversationStore {
     ConversationSnapshot load(UUID conversationId);

@@ -1,5 +1,6 @@
 package com.example.atlas.application;
 
+import com.example.atlas.application.conversation.ConversationStore;
 import com.example.atlas.application.tool.ToolExecutor;
 import com.example.atlas.domain.conversation.*;
 import com.example.atlas.api.dto.InferenceRequest;
@@ -15,26 +16,24 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 @Service
 @RequiredArgsConstructor
 public class AtlasService {
-
     @Value("${atlas.max.agent.steps}")
     private int maxSteps;
 
+    private final ConversationStore conversationStore;
     private final BedrockConverseService bedrockConverseService;
     private final ToolExecutor toolExecutor;
-
-    private final List<ConversationMessage> conversationHistory = new ArrayList<>();
 
     public InferenceResponse inferentMessage(InferenceRequest request) {
         var modelConfig = new ModelConfig(request.getMaxTokens(), request.getTemperature());
 
-        var workingConversation = new ArrayList<>(conversationHistory);
+        var snapshot = conversationStore.load(request.getConversationId());
+        var workingConversation = new ArrayList<>(snapshot.conversationMessages());
         workingConversation.add(new ConversationMessage(Role.USER, new TextContent(request.getMessage())));
 
         for(int step = 0; step < maxSteps; step++) {
@@ -43,7 +42,7 @@ public class AtlasService {
             switch (inferenceResult) {
                 case TextInferenceResult result:
                     workingConversation.add(new ConversationMessage(Role.ASSISTANT, new TextContent(result.text())));
-                    commitConversation(workingConversation);
+                    conversationStore.save(request.getConversationId(), snapshot.version(), workingConversation);
                     return new InferenceResponse(result.text());
                 case ToolCallInferenceResult result:
                     workingConversation.add(new ConversationMessage(Role.ASSISTANT, new ToolUseContent(result.toolUseId(), result.toolName(), result.input())));
@@ -56,7 +55,8 @@ public class AtlasService {
     }
 
     public CompletableFuture<Void> inferentMessageStream(InferenceRequest request, Consumer<AtlasStreamEvent> eventConsumer) {
-        var workingConversation = new ArrayList<>(conversationHistory);
+        var snapshot = conversationStore.load(request.getConversationId());
+        var workingConversation = new ArrayList<>(snapshot.conversationMessages());
         workingConversation.add(new ConversationMessage(Role.USER, new TextContent(request.getMessage())));
         StringBuilder assistantResponse = new StringBuilder();
 
@@ -76,23 +76,35 @@ public class AtlasService {
 
         var conversedStream = bedrockConverseService.converseStream(workingConversation,
                 new ModelConfig(request.getMaxTokens(), request.getTemperature()), internalEventConsumer);
+        var resultFuture = new CompletableFuture<Void>();
         conversedStream.whenComplete((result, exception) -> {
             if (!conversedStream.isCancelled()) {
                 if (exception != null) {
                     eventConsumer.accept(new StreamErrorEvent(exception.getMessage()));
+                    resultFuture.completeExceptionally(exception);
                 } else {
-                    conversationHistory.add(new ConversationMessage(Role.USER, new TextContent(request.getMessage())));
-                    conversationHistory.add(new ConversationMessage(Role.ASSISTANT, new TextContent(assistantResponse.toString())));
+                    workingConversation.add(new ConversationMessage(Role.ASSISTANT, new TextContent(assistantResponse.toString())));
+
+                    try {
+                        conversationStore.save(request.getConversationId(), snapshot.version(), workingConversation);
+                    } catch (Exception saveException) {
+                        eventConsumer.accept(new StreamErrorEvent(saveException.getMessage()));
+                        resultFuture.completeExceptionally(saveException);
+                        return;
+                    }
                     eventConsumer.accept(new StreamCompletedEvent());
+                    resultFuture.complete(null);
                 }
+            } else {
+                resultFuture.cancel(false);
             }
         });
+        resultFuture.whenComplete((result, exception) -> {
+           if (resultFuture.isCancelled()) {
+               conversedStream.cancel(false);
+           }
+        });
 
-        return conversedStream;
-    }
-
-    private void commitConversation(List<ConversationMessage> workingConversation) {
-        conversationHistory.clear();
-        conversationHistory.addAll(workingConversation);
+        return resultFuture;
     }
 }

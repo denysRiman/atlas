@@ -1,20 +1,14 @@
 package com.example.atlas.application;
 
+import com.example.atlas.application.agent.AgentRunner;
 import com.example.atlas.application.conversation.ConversationStore;
-import com.example.atlas.application.knowledge.KnowledgeRetrievalService;
-import com.example.atlas.application.tool.ToolExecutor;
 import com.example.atlas.domain.conversation.*;
 import com.example.atlas.api.dto.InferenceRequest;
-import com.example.atlas.domain.inference.InferenceResult;
 import com.example.atlas.domain.inference.ModelConfig;
 import com.example.atlas.api.dto.InferenceResponse;
-import com.example.atlas.domain.inference.TextInferenceResult;
-import com.example.atlas.domain.inference.ToolCallInferenceResult;
 import com.example.atlas.domain.streaming.*;
 import com.example.atlas.integration.bedrock.BedrockConverseService;
-import com.example.atlas.prompt.KnowledgePromptProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -24,61 +18,20 @@ import java.util.function.Consumer;
 @Service
 @RequiredArgsConstructor
 public class AtlasService {
-    @Value("${atlas.max.agent.steps}")
-    private int maxSteps;
 
+
+    private final AgentRunner agentRunner;
     private final ConversationStore conversationStore;
-    private final KnowledgeRetrievalService knowledgeRetrievalService;
-    private final KnowledgePromptProvider knowledgePromptProvider;
     private final BedrockConverseService bedrockConverseService;
-    private final ToolExecutor toolExecutor;
+
 
     public InferenceResponse inferentMessage(InferenceRequest request) {
         var modelConfig = new ModelConfig(request.getMaxTokens(), request.getTemperature());
-
         var snapshot = conversationStore.load(request.getConversationId());
+        var executionResult = agentRunner.run(snapshot.conversationMessages(), request.getMessage(), modelConfig);
 
-        var persistentConversation = new ArrayList<>(snapshot.conversationMessages());
-        persistentConversation.add(
-                new ConversationMessage(
-                        Role.USER,
-                        new TextContent(request.getMessage())
-                )
-        );
-
-
-        var knowledge = knowledgeRetrievalService.retrieveKnowledge(request.getMessage());
-        var modelConversation = new ArrayList<>(snapshot.conversationMessages());
-        modelConversation.add(
-                new ConversationMessage(
-                        Role.USER,
-                        new TextContent(
-                                knowledgePromptProvider.loadKnowledge(
-                                        request.getMessage(),
-                                        knowledge
-                                )
-                        )
-                )
-        );
-
-        for(int step = 0; step < maxSteps; step++) {
-            InferenceResult inferenceResult = bedrockConverseService.converse(modelConversation, modelConfig);
-
-            switch (inferenceResult) {
-                case TextInferenceResult result:
-                    persistentConversation.add(new ConversationMessage(Role.ASSISTANT, new TextContent(result.text())));
-                    conversationStore.save(request.getConversationId(), snapshot.version(), persistentConversation);
-                    return new InferenceResponse(result.text());
-                case ToolCallInferenceResult result:
-                    persistentConversation.add(new ConversationMessage(Role.ASSISTANT, new ToolUseContent(result.toolUseId(), result.toolName(), result.input())));
-                    modelConversation.add(new ConversationMessage(Role.ASSISTANT, new ToolUseContent(result.toolUseId(), result.toolName(), result.input())));
-                    var toolResult = toolExecutor.execute(result.toolName(), result.input());
-                    persistentConversation.add(new ConversationMessage(Role.USER, new ToolResultContent(result.toolUseId(), toolResult)));
-                    modelConversation.add(new ConversationMessage(Role.USER, new ToolResultContent(result.toolUseId(), toolResult)));
-            }
-        }
-        throw new RuntimeException("Maximum agent steps exceeded");
-
+        conversationStore.save(request.getConversationId(), snapshot.version(), executionResult.conversation());
+        return new InferenceResponse(executionResult.response());
     }
 
     public CompletableFuture<Void> inferentMessageStream(InferenceRequest request, Consumer<AtlasStreamEvent> eventConsumer) {

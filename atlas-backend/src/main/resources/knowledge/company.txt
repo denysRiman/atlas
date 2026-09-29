@@ -1,0 +1,9 @@
+Atlas Labs is a fictional software company based in Vienna, Austria.
+
+The company develops logistics and document-processing software for European customers. The engineering organization consists of backend, frontend, platform, data, and product teams.
+
+The primary backend technology is Java with Spring Boot. PostgreSQL is the main relational database. Kafka is used for asynchronous communication between services.
+
+Employees normally work remotely up to three days per week. The main office is located in Vienna. Engineering teams use English as their primary working language.
+
+Production services are deployed to AWS. Teams use Amazon Bedrock for selected generative AI workloads. All production changes require code review and automated CI checks before deployment.

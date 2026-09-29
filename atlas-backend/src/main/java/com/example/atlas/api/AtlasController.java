@@ -5,6 +5,7 @@ import com.example.atlas.api.dto.InferenceResponse;
 import com.example.atlas.api.dto.InferenceStreamResponse;
 import com.example.atlas.api.dto.StreamResponseStatus;
 import com.example.atlas.application.AtlasService;
+import com.example.atlas.application.knowledge.KnowledgeIngestionService;
 import com.example.atlas.domain.streaming.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class AtlasController {
     private Duration timeout;
 
     private final AtlasService atlasService;
+    private final KnowledgeIngestionService knowledgeIngestionService;
 
     @PostMapping("/inference")
     public ResponseEntity<InferenceResponse> inference(@Valid @RequestBody InferenceRequest request) {
@@ -43,6 +45,11 @@ public class AtlasController {
         });
         configureLifecycle(emitter, inference);
         return emitter;
+    }
+
+    @PostMapping("ingest")
+    public void ingest() {
+        knowledgeIngestionService.ingest();
     }
 
     private static void sendEvent(AtlasStreamEvent event, SseEmitter emitter) {

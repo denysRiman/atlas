@@ -31,7 +31,7 @@ public class AtlasService {
         var executionResult = agentRunner.run(snapshot.conversationMessages(), request.getMessage(), modelConfig);
 
         conversationStore.save(request.getConversationId(), snapshot.version(), executionResult.conversation());
-        return new InferenceResponse(executionResult.response());
+        return new InferenceResponse(executionResult.response(), executionResult.sources());
     }
 
     public CompletableFuture<Void> inferentMessageStream(InferenceRequest request, Consumer<AtlasStreamEvent> eventConsumer) {

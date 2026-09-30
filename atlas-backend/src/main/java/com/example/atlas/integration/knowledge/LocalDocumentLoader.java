@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Component
@@ -49,11 +50,15 @@ public class LocalDocumentLoader implements DocumentLoader {
 
     private SourceDocument createDocument(Resource resource) {
         String content;
+        var fileName = resource.getFilename();
         try {
             content = resource.getContentAsString(StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to load document content",e);
         }
-        return new SourceDocument(UUID.randomUUID(), resource.getFilename(), content);
+        return new SourceDocument(UUID.nameUUIDFromBytes(
+                Objects.requireNonNull(fileName).getBytes(StandardCharsets.UTF_8)),
+                fileName,
+                content);
     }
 }

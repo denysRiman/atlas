@@ -2,10 +2,12 @@ package com.example.atlas.integration.pgvector;
 
 import com.example.atlas.application.knowledge.VectorStore;
 import com.example.atlas.domain.knowledge.DocumentChunk;
+import com.example.atlas.domain.knowledge.EmbeddedChunk;
 import com.example.atlas.domain.knowledge.RetrievedChunk;
 import lombok.AllArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -15,42 +17,6 @@ import java.util.UUID;
 public class PgVectorStore implements VectorStore {
 
     private final JdbcClient jdbcClient;
-
-    @Override
-    public void save(DocumentChunk chunk, float[] embedding) {
-        if (embedding.length != 1024) {
-            throw new IllegalArgumentException("Embedding must have 1024 dimensions, but was " + embedding.length);
-        }
-
-        var vector = toPgVector(embedding);
-
-        jdbcClient.sql("""
-            INSERT INTO document_chunk (
-                chunk_id,
-                document_id,
-                content,
-                chunk_index,
-                source,
-                embedding
-            )
-            VALUES (
-                :chunkId,
-                :documentId,
-                :content,
-                :chunkIndex,
-                :source,
-                CAST(:embedding AS vector)
-            )
-            """)
-                .param("chunkId", chunk.chunkId())
-                .param("documentId", chunk.documentId())
-                .param("content", chunk.content())
-                .param("chunkIndex", chunk.chunkIndex())
-                .param("source", chunk.source())
-                .param("embedding", vector)
-                .update();
-
-    }
 
     @Override
     public List<RetrievedChunk> search(float[] queryEmbedding, int topK) {
@@ -86,6 +52,60 @@ public class PgVectorStore implements VectorStore {
                 );
                 return new RetrievedChunk(chunk, rs.getDouble("score"));
             }).list();
+    }
+
+    @Transactional
+    @Override
+    public void replaceDocumentChunks(UUID documentId, List<EmbeddedChunk> newChunks) {
+        removeChunks(documentId);
+        for (EmbeddedChunk newChunk : newChunks) {
+            save(newChunk.chunk(), newChunk.embedding());
+        }
+    }
+
+    private void save(DocumentChunk chunk, float[] embedding) {
+        if (embedding.length != 1024) {
+            throw new IllegalArgumentException("Embedding must have 1024 dimensions, but was " + embedding.length);
+        }
+
+        var vector = toPgVector(embedding);
+
+        jdbcClient.sql("""
+            INSERT INTO document_chunk (
+                chunk_id,
+                document_id,
+                content,
+                chunk_index,
+                source,
+                embedding
+            )
+            VALUES (
+                :chunkId,
+                :documentId,
+                :content,
+                :chunkIndex,
+                :source,
+                CAST(:embedding AS vector)
+            )
+            """)
+                .param("chunkId", chunk.chunkId())
+                .param("documentId", chunk.documentId())
+                .param("content", chunk.content())
+                .param("chunkIndex", chunk.chunkIndex())
+                .param("source", chunk.source())
+                .param("embedding", vector)
+                .update();
+
+    }
+
+    private void removeChunks(UUID documentId) {
+        jdbcClient.sql("""
+            DELETE
+            FROM document_chunk
+            WHERE document_id = :documentId
+        """)
+                .param("documentId", documentId)
+                .update();
     }
 
     private static String toPgVector(float[] vector) {

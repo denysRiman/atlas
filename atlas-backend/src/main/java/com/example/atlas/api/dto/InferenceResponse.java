@@ -1,10 +1,6 @@
 package com.example.atlas.api.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import java.util.List;
 
-@AllArgsConstructor
-@Getter
-public class InferenceResponse {
-    private String message;
+public record InferenceResponse(String message, List<String> sources) {
 }

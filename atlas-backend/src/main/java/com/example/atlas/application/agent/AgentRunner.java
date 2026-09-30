@@ -38,6 +38,10 @@ public class AgentRunner {
         );
 
         var knowledge = knowledgeRetrievalService.retrieveKnowledge(message);
+        var sources = knowledge.stream()
+                .map(retrievedChunk -> retrievedChunk.documentChunk().source())
+                .distinct()
+                .toList();
         var modelConversation = new ArrayList<>(existingMessages);
         modelConversation.add(
                 new ConversationMessage(
@@ -57,7 +61,7 @@ public class AgentRunner {
             switch (inferenceResult) {
                 case TextInferenceResult result:
                     persistentConversation.add(new ConversationMessage(Role.ASSISTANT, new TextContent(result.text())));
-                    return new AgentExecutionResult(result.text(), persistentConversation);
+                    return new AgentExecutionResult(result.text(), persistentConversation, sources);
                 case ToolCallInferenceResult result:
                     ConversationMessage assistantMessage = new ConversationMessage(Role.ASSISTANT, new ToolUseContent(result.toolUseId(), result.toolName(), result.input()));
                     persistentConversation.add(assistantMessage);

@@ -1,4 +1,4 @@
 package com.example.atlas.domain.knowledge;
 
-public record RetrievedChunk(DocumentChunk documentChunk, double score) {
+public record RetrievedChunk(String content, String source, double score) {
 }

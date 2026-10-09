@@ -1,8 +1,6 @@
 package com.example.atlas.prompt;
 
-import com.example.atlas.domain.knowledge.DocumentChunk;
 import com.example.atlas.domain.knowledge.RetrievedChunk;
-import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -27,15 +25,12 @@ public class KnowledgePromptProvider {
 
             var knowledgeBuilder = new StringBuilder();
             for (RetrievedChunk retrievedChunk : retrievedChunks) {
-                var chunk = retrievedChunk.documentChunk();
 
                 knowledgeBuilder
                         .append("[Source: ")
-                        .append(chunk.source())
-                        .append(", chunk: ")
-                        .append(chunk.chunkIndex())
+                        .append(retrievedChunk.source())
                         .append("]\n")
-                        .append(chunk.content())
+                        .append(retrievedChunk.content())
                         .append("\n\n");
             }
             var knowledge = knowledgeBuilder.toString().strip();

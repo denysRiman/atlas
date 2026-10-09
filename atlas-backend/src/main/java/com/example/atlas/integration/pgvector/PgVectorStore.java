@@ -50,7 +50,7 @@ public class PgVectorStore implements VectorStore {
                         rs.getInt("chunk_index"),
                         rs.getString("source")
                 );
-                return new RetrievedChunk(chunk, rs.getDouble("score"));
+                return new RetrievedChunk(chunk.content(), chunk.source(), rs.getDouble("score"));
             }).list();
     }
 

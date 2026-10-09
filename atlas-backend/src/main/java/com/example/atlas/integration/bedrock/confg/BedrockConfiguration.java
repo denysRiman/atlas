@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.bedrockagentruntime.BedrockAgentRuntimeClient;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 
@@ -23,6 +24,13 @@ public class BedrockConfiguration {
     @Bean
     public BedrockRuntimeAsyncClient bedrockRuntimeAsyncClient() {
         return BedrockRuntimeAsyncClient.builder()
+                .region(Region.of(region))
+                .build();
+    }
+
+    @Bean
+    public BedrockAgentRuntimeClient bedrockAgentRuntimeClient() {
+        return BedrockAgentRuntimeClient.builder()
                 .region(Region.of(region))
                 .build();
     }

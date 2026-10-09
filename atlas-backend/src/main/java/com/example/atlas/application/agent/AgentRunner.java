@@ -7,6 +7,7 @@ import com.example.atlas.domain.inference.InferenceResult;
 import com.example.atlas.domain.inference.ModelConfig;
 import com.example.atlas.domain.inference.TextInferenceResult;
 import com.example.atlas.domain.inference.ToolCallInferenceResult;
+import com.example.atlas.domain.knowledge.RetrievedChunk;
 import com.example.atlas.integration.bedrock.BedrockConverseService;
 import com.example.atlas.prompt.KnowledgePromptProvider;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +40,7 @@ public class AgentRunner {
 
         var knowledge = knowledgeRetrievalService.retrieveKnowledge(message);
         var sources = knowledge.stream()
-                .map(retrievedChunk -> retrievedChunk.documentChunk().source())
+                .map(RetrievedChunk::source)
                 .distinct()
                 .toList();
         var modelConversation = new ArrayList<>(existingMessages);

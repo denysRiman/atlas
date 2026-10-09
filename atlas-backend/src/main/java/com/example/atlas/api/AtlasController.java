@@ -6,6 +6,8 @@ import com.example.atlas.api.dto.InferenceStreamResponse;
 import com.example.atlas.api.dto.StreamResponseStatus;
 import com.example.atlas.application.AtlasService;
 import com.example.atlas.application.knowledge.KnowledgeIngestionService;
+import com.example.atlas.application.knowledge.KnowledgeRetrievalService;
+import com.example.atlas.domain.knowledge.RetrievedChunk;
 import com.example.atlas.domain.streaming.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
@@ -30,6 +33,7 @@ public class AtlasController {
 
     private final AtlasService atlasService;
     private final KnowledgeIngestionService knowledgeIngestionService;
+    private final KnowledgeRetrievalService knowledgeRetrievalService;
 
     @PostMapping("/inference")
     public ResponseEntity<InferenceResponse> inference(@Valid @RequestBody InferenceRequest request) {
@@ -43,6 +47,13 @@ public class AtlasController {
         var inference = atlasService.inferentMessageStream(request, event -> sendEvent(event, emitter));
         configureLifecycle(emitter, inference);
         return emitter;
+    }
+
+    @PostMapping("/evaluate")
+    public List<List<RetrievedChunk>> evaluate(@RequestBody List<InferenceRequest> requests) {
+        return requests.stream()
+                .map(request -> knowledgeRetrievalService.retrieveKnowledge(request.getMessage()))
+                .toList();
     }
 
     @PostMapping("/ingest")

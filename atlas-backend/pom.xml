@@ -9,12 +9,9 @@
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 	<artifactId>atlas-backend</artifactId>
-	<name>atlas</name>
+	<name>atlas-backend</name>
 	<description>atlas</description>
 	<url/>
-	<properties>
-		<java.version>26</java.version>
-	</properties>
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -35,6 +32,10 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-mcp-client</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
